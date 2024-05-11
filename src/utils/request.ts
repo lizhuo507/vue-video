@@ -1,0 +1,47 @@
+import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+// 创建 axios 实例
+const service = axios.create({
+    baseURL: '/api',
+    timeout: 120000,
+    headers: { 'Content-Type': 'application/json;charset=utf-8' },
+})
+
+// 请求拦截器
+service.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const accessToken = '51a15d83730941209cb68d6413340bc5'
+    //window.$wujie?.props.token
+    // if (accessToken) {
+    //   config.headers.token = accessToken
+    // }
+    return config;
+  },
+  (error: any) => {
+    return Promise.reject(error);
+  }
+);
+  // location.replace('http://10.100.254.150/zhgztout/#/login?pwd=1&appName=spzxl')
+
+// 响应拦截器
+service.interceptors.response.use(
+  (response: AxiosResponse) => {
+      // console.log(response)
+      if (response.status == 200) {
+          // ElMessage.success(msg)
+          return response.data
+      }
+      // 响应数据为二进制流处理(Excel导出)
+      if (response.data instanceof ArrayBuffer) {
+          return response
+      }
+      return Promise.reject(new Error(response.data.msg || 'Error'))
+  },
+  (error: any) => {
+    return Promise.reject(error);
+  }
+);
+
+// 导出 axios 实例
+export default service;
