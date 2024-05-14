@@ -4,12 +4,16 @@
       <!-- <el-text class="w-150px" truncated>
       视频在线率
     </el-text> -->
-      <h4 class="pb-1 pl-1 flex justify-between items-center">视频在线率统计 <el-button link type="primary" @click="logout" ><el-icon><SwitchButton /></el-icon>退出登录</el-button></h4>
-      
+      <h4 class="pb-1 pl-1 flex justify-between items-center">视频在线率统计 <el-button link type="primary"
+          @click="logout"><el-icon>
+            <SwitchButton />
+          </el-icon>退出登录</el-button></h4>
+
       <div class="search-container">
         <el-form ref="queryFormRef" :model="queryParams" :inline="true">
           <el-form-item prop="keywords" label="路公司名称">
-            <el-input v-model="queryParams.company" :class="`w-[${100+queryParams.company?.length*10}px]`" placeholder="路公司名称" clearable :disabled="isCompany"/>
+            <el-input v-model="queryParams.company" :class="`w-[${100 + queryParams.company?.length * 10}px]`"
+              placeholder="路公司名称" clearable :disabled="isCompany" />
           </el-form-item>
           <el-form-item prop="keywords" label="路段名称">
             <el-input v-model="queryParams.installPlace" class="w-[200px]" placeholder="路段名称" clearable />
@@ -153,8 +157,8 @@ const options = ref([
     value: 2,
   },
 ]);
-const userName=ref<any>(window.$wujie?.props.roleInfo?.user.userName||'')
-const isCompany=ref<boolean>(userName.value?.slice(-2) === '公司'&&userName.value!=='全省')
+const userName = ref<any>(window.$wujie?.props.roleInfo?.user.userName || '')
+const isCompany = ref<boolean>(userName.value?.slice(-2) === '公司' && userName.value !== '全省')
 const loading = ref(false);
 const dialogLoading = ref(false);
 const ids = ref<string[]>([]);
@@ -169,7 +173,7 @@ const format = 'YYYY-MM-DD HH:mm:ss'
 const queryParams = reactive<any>({
   page: 1,
   pageSize: 20,
-  company: userName.value==='全省'?'':userName.value,
+  company: userName.value === '全省' ? '' : userName.value,
   installPlace: '',
   countType: 1,
   start: '',
@@ -200,7 +204,7 @@ watch(
       queryParams.start = dayjs().subtract(30, 'day').startOf('day').format(format)
       queryParams.end = dayjs().subtract(1, 'day').endOf('day').format(format)
     }
-    if (newValue == 4) return tableData.value=[]
+    if (newValue == 4) return tableData.value = []
     // ids.value=[]
     // queryParams.company=userName.value
     // isCompany.value=userName.value&&userName.value.slice(-2) === '公司'
@@ -215,14 +219,14 @@ let allNum: any
 async function handleQuery() {
   loading.value = true;
   // console.log(time.value);
-   //列表接口
+  //列表接口
   const res: any = await request.post(`/vhcioiset/videoPointHisList?token=${token}`, { ...queryParams, onFlag: time.value == 0 ? "on" : "off" })
     .catch(() => {
       tableData.value = []
     }).finally(() => {
       loading.value = false;
     });
-    //合计接口
+  //合计接口
   allNum = await request.post(`/vhcioiset/videoPointSumList?token=${token}`, { ...queryParams, onFlag: time.value == 0 ? "on" : "off" })
   // console.log(res.responseData,allNum);
   if (res.code != 200) return ElMessage.error(res.msg);
@@ -291,7 +295,7 @@ async function openDialog(row) {
 
 //自定义时间提交
 function timeSubmit() {
-  if(!date.value) return ElMessage.warning("请选择查询日期");
+  if (!date.value) return ElMessage.warning("请选择查询日期");
   queryParams.start = dayjs(date.value).startOf('day').format(format)
   queryParams.end = dayjs(date.value).endOf('day').format(format)
   handleQuery()
@@ -392,13 +396,12 @@ async function handleExport() {
       }
     });
 }
-async function  logout(){
+async function logout() {
   // console.log(location);
   const result = await ElMessageBox.confirm('确定要退出登录吗?', '提示', {
-        type: 'warning'
-      }).catch((e) => e)
+    type: 'warning'
+  }).catch((e) => e)
   if (result !== 'confirm') return
-  window.$wujie.props.logoutSilent(false).then(() => window.$wujie.props.getWindow().location.href=location.origin+'/out/#/login?pwd=1&appName=spzxl')
+  window.$wujie.props.logoutSilent(false).then(() => window.$wujie.props.getWindow().location.href = location.origin + '/out/#/login?pwd=1&appName=spzxl')
 }
 </script>
-
