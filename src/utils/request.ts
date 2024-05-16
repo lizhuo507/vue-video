@@ -3,7 +3,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 创建 axios 实例
 const service = axios.create({
-    baseURL: '/api',
+    baseURL:process.env.NODE_ENV === 'development' ? '/api' : 'http://10.100.13.166:8888',
     timeout: 120000,
     headers: { 'Content-Type': 'application/json;charset=utf-8' },
 })
@@ -22,7 +22,6 @@ service.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-  // location.replace('http://10.100.254.150/zhgztout/#/login?pwd=1&appName=spzxl')
 
 // 响应拦截器
 service.interceptors.response.use(
