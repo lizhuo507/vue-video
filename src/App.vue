@@ -2,7 +2,7 @@
   <div class="app-main">
     <div class="app-container">
       <h4 class="pb-1 pl-1 flex justify-between items-center">
-        <el-text class="w-150px" truncated> 视频在线率统计 </el-text>
+        <el-text  truncated> 视频在线率统计 </el-text>
         <el-button link type="primary" @click="logout"
           >
           <el-icon>
@@ -11,13 +11,12 @@
           >退出登录</el-button
         >
       </h4>
-
       <div class="search-container">
         <el-form ref="queryFormRef" :model="queryParams" :inline="true">
           <el-form-item prop="keywords" label="路公司名称">
             <el-input
               v-model="queryParams.company"
-              :style="{width:100 + (queryParams.company?.length||0) * 10+'px'}"
+              :style="{width:120 + (queryParams.company?.length||0) * 10+'px'}"
               placeholder="路公司名称"
               clearable
               :disabled="isCompany"
@@ -398,7 +397,7 @@ function getSummaries(param: any) {
       sums[index] = "合计";
     }
     if (index === 1) {
-      sums[index] = userName.value === "全省" ? "全省" : userName.value;
+      sums[index] = '';
     }
     if (index === 3) {
       sums[index] = allNum?.collect_num || "-";
@@ -555,7 +554,7 @@ async function logout() {
   if (result !== "confirm") return;
   window.$wujie.props.logoutSilent(false).then(() => {
     window.$wujie.props.getWindow().location.href =
-      location.origin + (process.env.NODE_ENV === 'development'?'/out/#/login?pwd=1&appName=spzxl':"/#/login?appName=spzxl");
+      location.origin + (process.env.NODE_ENV === 'development'?'/out/#/login?pwd=1&appName=spzxl':'/#/login?appName=spzxl');
   })
 }
 </script>
