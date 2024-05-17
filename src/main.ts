@@ -16,6 +16,7 @@ app.use(ElementUI, {
     locale: localeZH,
 }).mount('#app')
 
+
 declare global {
     interface Window {
         $wujie: {

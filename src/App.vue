@@ -17,7 +17,7 @@
           <el-form-item prop="keywords" label="路公司名称">
             <el-input
               v-model="queryParams.company"
-              :class="`w-[${100 + queryParams.company?.length * 10}px]`"
+              :class="`w-[${150 + queryParams.company?.length * 10}px]`"
               placeholder="路公司名称"
               clearable
               :disabled="isCompany"
@@ -397,7 +397,7 @@ function getSummaries(param: any) {
       sums[index] = "合计";
     }
     if (index === 1) {
-      sums[index] = "全省";
+      sums[index] = userName.value === "全省" ? "" : userName.value;
     }
     if (index === 3) {
       sums[index] = allNum?.collect_num || "-";
@@ -554,7 +554,7 @@ async function logout() {
   if (result !== "confirm") return;
   window.$wujie.props.logoutSilent(false).then(() => {
     window.$wujie.props.getWindow().location.href =
-      location.origin + "/out/#/login?pwd=1&appName=spzxl";
-  });
+      location.origin + (process.env.NODE_ENV === 'development'?'':"/#/login?appName=spzxl");
+  })
 }
 </script>
