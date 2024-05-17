@@ -264,9 +264,9 @@ const options = ref([
     value: 2,
   },
 ]);
-const userName = ref<any>(window.$wujie?.props.roleInfo?.user.userName || "");
+const companyName = ref<any>(window.$wujie?.props.roleInfo?.user.fullName || "");
 const isCompany = ref<boolean>(
-  userName.value?.slice(-2) === "公司" && userName.value !== "全省"
+  companyName.value?.slice(-2) === "公司" && companyName.value !== "全省"
 );
 const loading = ref(false);
 const dialogLoading = ref(false);
@@ -282,7 +282,7 @@ const format = "YYYY-MM-DD HH:mm:ss";
 const queryParams = reactive<any>({
   page: 1,
   pageSize: 20,
-  company: userName.value === "全省" ? "" : userName.value,
+  company: companyName.value === "全省" ? "" : companyName.value,
   installPlace: "",
   countType: 1,
   start: "",
@@ -341,8 +341,8 @@ watch(
     }
     if (newValue == 4) return (tableData.value = []);
     // ids.value=[]
-    // queryParams.company=userName.value
-    // isCompany.value=userName.value&&userName.value.slice(-2) === '公司'
+    // queryParams.company=companyName.value
+    // isCompany.value=companyName.value&&companyName.value.slice(-2) === '公司'
 
     queryParams.page = 1;
     handleQuery();
