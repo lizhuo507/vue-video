@@ -2,12 +2,10 @@
   <div class="app-main">
     <div class="app-container">
       <h4 class="pb-1 pl-1 flex justify-between items-center">
-        <el-text  truncated> 视频在线率统计 </el-text>
-        <el-button link type="primary" @click="logout"
-          >
+        <el-text truncated> 视频在线率统计 </el-text>
+        <el-button link type="primary" @click="logout">
           <el-icon>
-            <SwitchButton />
-           </el-icon
+            <SwitchButton /> </el-icon
           >退出登录</el-button
         >
       </h4>
@@ -16,7 +14,9 @@
           <el-form-item prop="keywords" label="路公司名称">
             <el-input
               v-model="queryParams.company"
-              :style="{width:120 + (queryParams.company?.length||0) * 10+'px'}"
+              :style="{
+                width: 120 + (queryParams.company?.length || 0) * 10 + 'px',
+              }"
               placeholder="路公司名称"
               clearable
               :disabled="isCompany"
@@ -24,8 +24,11 @@
           </el-form-item>
           <el-form-item prop="keywords" label="路段名称">
             <el-input
+              :style="{
+                width:
+                  120 + (queryParams.installPlace?.length || 0) * 10 + 'px',
+              }"
               v-model="queryParams.installPlace"
-              class="w-[200px]"
               placeholder="路段名称"
               clearable
             />
@@ -44,7 +47,7 @@
               v-model="queryParams.countType"
               placeholder=""
               style="width: 180px"
-              @change="() => handleQuery()"
+              @change="onChange"
             >
               <el-option
                 v-for="item in options"
@@ -160,12 +163,11 @@
           @current-change="handleCurrentChange"
         />
       </el-card>
-
       <!-- 详情弹窗 -->
       <el-dialog
         v-model="dialogVisible"
         title="详情"
-        width="65%"
+        width="66%"
         @close="closeDialog"
       >
         <el-table
@@ -177,9 +179,13 @@
             <el-empty />
           </template>
           <el-table-column prop="camera_name" label="摄像机名称" />
-          <el-table-column prop="camera_index_code" label="ID" />
-          <el-table-column prop="server_index_code" label="网关编号" />
-          <el-table-column prop="online_status" label="在线状态" width="100">
+          <el-table-column prop="camera_index_code" label="ID" width="300" />
+          <el-table-column
+            prop="server_index_code"
+            label="网关编号"
+            width="300"
+          />
+          <el-table-column prop="online_status" label="在线状态" width="80">
             <template #default="{ row }">
               <el-tag v-if="row.online_status === '在线'" type="success"
                 >在线</el-tag
@@ -264,7 +270,9 @@ const options = ref([
     value: 2,
   },
 ]);
-const companyName = ref<any>(window.$wujie?.props.roleInfo?.user.fullName || "");
+const companyName = ref<any>(
+  window.$wujie?.props.roleInfo?.user.fullName || ""
+);
 const isCompany = ref<boolean>(
   companyName.value?.slice(-2) === "公司" && companyName.value !== "全省"
 );
@@ -312,10 +320,7 @@ watch(
         .subtract(1, "day")
         .startOf("day")
         .format(format);
-      queryParams.end = dayjs()
-      .subtract(1, "day")
-      .endOf("day")
-      .format(format);
+      queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
     }
     if (newValue == 7) {
       //近七天
@@ -323,10 +328,7 @@ watch(
         .subtract(7, "day")
         .startOf("day")
         .format(format);
-      queryParams.end = dayjs()
-      .subtract(1, "day")
-      .endOf("day")
-      .format(format);
+      queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
     }
     if (newValue == 30) {
       //近一月
@@ -334,10 +336,7 @@ watch(
         .subtract(30, "day")
         .startOf("day")
         .format(format);
-      queryParams.end = dayjs()
-      .subtract(1, "day")
-      .endOf("day")
-      .format(format);
+      queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
     }
     if (newValue == 4) return (tableData.value = []);
     // ids.value=[]
@@ -377,27 +376,25 @@ async function handleQuery() {
   total.value = Number(res.totalCount);
 }
 
+function onChange() {
+  queryParams.page = 1;
+  queryParams.pageSize = 20;
+  handleQuery();
+}
 function currentPageChange(val: number) {
   currentPage.value = val;
 }
-/** 行checkbox 选中事件 */
-function handleSelectionChange(selection: any) {
-  if (queryParams.countType == 1) {
-    ids.value = selection.map((item: any) => item.road_sec);
-  } else {
-    ids.value = selection.map((item: any) => item.install_place);
-  }
-}
+
 //列表合计
 function getSummaries(param: any) {
   const { columns, data } = param;
   const sums: string[] = [];
-  columns.forEach((column:any, index:number) => {
+  columns.forEach((column: any, index: number) => {
     if (index === 0) {
       sums[index] = "合计";
     }
     if (index === 1) {
-      sums[index] = '';
+      sums[index] = "";
     }
     if (index === 3) {
       sums[index] = allNum?.collect_num || "-";
@@ -415,7 +412,7 @@ function getSummaries(param: any) {
   return sums;
 }
 //详情弹框
-async function openDialog(row:any) {
+async function openDialog(row: any) {
   dialogLoading.value = true;
   // list.value=[]
   const params = { ...queryParams };
@@ -470,6 +467,16 @@ function getRandom(min: number, max: number) {
   return Math.round(Math.random() * (max - min) + min);
 }
 
+/** 行checkbox 选中事件 */
+function handleSelectionChange(selection: any) {
+  if (queryParams.countType == 1) {
+    //管养单位
+    ids.value = selection.map((item: any) => item.road_sec);
+  } else {
+    //路段名称
+    ids.value = selection.map((item: any) => item);
+  }
+}
 const fileDown = reactive<any>({
   loadDialogStatus: false, //弹出框控制的状态
   percentage: 0, //进度条的百分比
@@ -500,10 +507,17 @@ async function handleExport() {
     ids.value.length > 50 ? 1000 : 500
   );
   var params = { ...queryParams };
+  //清空防止查询项干扰
+  params.company = ''
+  params.installPlace = ''
+  //不同统计依据的处理
   if (params.countType == 1) {
+    //管养单位
     params.company = ids.value;
   } else {
-    params.installPlace = ids.value;
+    //路段名称
+    params.company = ids.value.map((item: any) => item.road_sec);
+    params.installPlace = ids.value.map((item: any) => item.install_place);
   }
   request({
     method: "post",
@@ -511,6 +525,7 @@ async function handleExport() {
     data: { ...params, onFlag: time.value == 0 ? "on" : "off" },
     responseType: "blob",
     cancelToken: source.token,
+    timeout: 120000 
   })
     .then((res: any) => {
       console.log(res);
@@ -554,7 +569,10 @@ async function logout() {
   if (result !== "confirm") return;
   window.$wujie.props.logoutSilent(false).then(() => {
     window.$wujie.props.getWindow().location.href =
-      location.origin + (process.env.NODE_ENV === 'development'?'/out/#/login?pwd=1&appName=spzxl':'/#/login?appName=spzxl');
-  })
+      location.origin +
+      (process.env.NODE_ENV === "development"
+        ? "/out/#/login?pwd=1&appName=spzxl"
+        : "/#/login?appName=spzxl");
+  });
 }
 </script>
