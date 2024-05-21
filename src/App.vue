@@ -64,6 +64,7 @@
             <el-button
               @click="handleExport"
               type="success"
+              v-if="isExport"
               :disabled="!ids.length"
               :icon="Download"
               >导出</el-button
@@ -270,12 +271,15 @@ const options = ref([
     value: 2,
   },
 ]);
-const companyName = ref<any>(
-  window.$wujie?.props.roleInfo?.user.fullName || ""
+const user = reactive<any>(
+  window.$wujie?.props.roleInfo?.user||{}
 );
 const isCompany = ref<boolean>(
-  companyName.value?.slice(-2) === "公司" && companyName.value !== "全省"
+  //不属于视频枢纽部门或者fullName不等于全省
+  process.env.NODE_ENV === "development"?false: user.deptId!=="10010109" || user.fullName !== "全省"
 );
+
+const isExport = ref(true);
 const loading = ref(false);
 const dialogLoading = ref(false);
 const ids = ref<string[]>([]);
@@ -290,7 +294,7 @@ const format = "YYYY-MM-DD HH:mm:ss";
 const queryParams = reactive<any>({
   page: 1,
   pageSize: 20,
-  company: companyName.value === "全省" ? "" : companyName.value,
+  company: user.fullName === "全省" ? "" : user.fullName,
   installPlace: "",
   countType: 1,
   start: "",
@@ -309,6 +313,7 @@ console.log(
 watch(
   time,
   (newValue) => {
+    isExport.value=true
     if (newValue == 0) {
       //实时
       queryParams.start = dayjs().startOf("day").format(format);
@@ -337,11 +342,11 @@ watch(
         .startOf("day")
         .format(format);
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
+      isExport.value=false
     }
     if (newValue == 4) return (tableData.value = []);
     // ids.value=[]
-    // queryParams.company=companyName.value
-    // isCompany.value=companyName.value&&companyName.value.slice(-2) === '公司'
+    // queryParams.company=user.fullName
 
     queryParams.page = 1;
     handleQuery();
