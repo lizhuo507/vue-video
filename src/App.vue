@@ -4,9 +4,7 @@
       <h4 class="pb-1 pl-1 flex justify-between items-center">
         <el-text truncated> 视频在线率统计 </el-text>
         <el-button link type="primary" @click="logout">
-          <el-icon>
-            <SwitchButton /> </el-icon
-          >退出登录</el-button
+          <el-icon> <SwitchButton /> </el-icon>退出登录</el-button
         >
       </h4>
       <div class="search-container">
@@ -22,14 +20,19 @@
               :disabled="isCompany"
             />
           </el-form-item>
-          <el-form-item prop="keywords" label="路段名称">
+          <el-form-item
+            prop="keywords"
+            :label="queryParams.countType == 1 ? '管养单位' : '路段名称'"
+          >
             <el-input
               :style="{
                 width:
                   120 + (queryParams.installPlace?.length || 0) * 10 + 'px',
               }"
               v-model="queryParams.installPlace"
-              placeholder="路段名称"
+              :placeholder="
+                queryParams.countType == 1 ? '管养单位' : '路段名称'
+              "
               clearable
             />
           </el-form-item>
@@ -124,7 +127,7 @@
           <el-table-column label="在线数" prop="online_num" />
           <el-table-column label="离线数" prop="outline_num" />
           <el-table-column
-            :label="time !== 7 && time !== 30 ? '实时在线率' : '平均在线率'"
+            :label="time === 0 ? '实时在线率' : '平均在线率'"
             prop="online_rate"
           >
             <template #default="{ row }">
@@ -168,8 +171,10 @@
       <el-dialog
         v-model="dialogVisible"
         title="详情"
-        width="66%"
+        width="80%"
         @close="closeDialog"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
       >
         <el-table
           v-loading="dialogLoading"
@@ -194,6 +199,18 @@
               <el-tag v-else type="info">离线</el-tag>
             </template>
           </el-table-column>
+          <el-table-column fixed="right" label="操作" width="60">
+            <template #default="{ row }">
+              <el-button type="text">
+                <el-icon
+                  class="text-[16px] hover:text-[20px]"
+                  @click="playVideo(row)"
+                >
+                  <VideoCamera />
+                </el-icon>
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
         <el-pagination
           class="flex justify-end"
@@ -203,11 +220,7 @@
           :current-page="currentPage"
           @current-change="currentPageChange"
         />
-        <template #footer>
-          <!-- <div class="dialog-footer">
-            <el-button @click="closeDialog" type="danger">关 闭</el-button>
-          </div> -->
-        </template>
+        <template #footer> </template>
       </el-dialog>
       <!-- 自定义弹框 -->
       <el-dialog
@@ -217,11 +230,17 @@
         @close="closeDialog"
       >
         <el-date-picker
+          style="width: 100%"
           v-model="date"
-          type="date"
-          placeholder="请选日期"
-          value-format="YYYY-MM-DD"
-        />
+          type="daterange"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          :value-format="format"
+          @calendar-change="(val:Date)=>firstdate=val"
+          :disabled-date="disableddate"
+          placeholder="选择日期范围"
+        >
+        </el-date-picker>
         <template #footer>
           <div class="dialog-footer">
             <el-button type="primary" @click="timeSubmit">确 定</el-button>
@@ -243,17 +262,35 @@
           <el-progress :percentage="fileDown.percentage" indeterminate />
         </div>
       </el-dialog>
+      <div
+        v-if="videoVisible"
+        class="video-modal"
+        :style="{ left: left + 'px', top: top + 'px' }"
+        ref="modal"
+      >
+        <div class="float-right">
+          <el-button type="text" link
+            ><el-icon
+              @click="videoVisible = false"
+              class="cursor-pointer text-[20px]"
+            >
+              <Close /> </el-icon
+          ></el-button>
+        </div>
+        <video controls src=""></video>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from "vue";
-import { Search, Download } from "@element-plus/icons-vue";
+import { ref, reactive, watch, computed, nextTick, watchEffect } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { Search, Download } from "@element-plus/icons-vue";
 import request from "@/utils/request";
 import axios from "axios";
 import dayjs from "dayjs";
+import Hls from "hls.js";
 
 defineOptions({
   name: "Dashboard",
@@ -271,20 +308,20 @@ const options = ref([
     value: 2,
   },
 ]);
-const user = reactive<any>(
-  window.$wujie?.props.roleInfo?.user||{}
-);
+const user = reactive<any>(window.$wujie?.props.roleInfo?.user || {});
 const isCompany = ref<boolean>(
   //不属于视频枢纽部门或者fullName不等于全省
-  process.env.NODE_ENV === "development"?false: user.deptId!=="10010109" || user.fullName !== "全省"
+  process.env.NODE_ENV === "development"
+    ? false
+    : user.deptId !== "10010109" || user.fullName !== "全省"
 );
-
 const isExport = ref(true);
 const loading = ref(false);
 const dialogLoading = ref(false);
 const ids = ref<string[]>([]);
 const total = ref<number>(0);
-const date = ref<any>("");
+const date = ref<any>([]);
+
 const tableData = ref<any[]>([]);
 const list = ref<any[]>([]);
 const dialogVisible = ref<boolean>(false);
@@ -294,7 +331,7 @@ const format = "YYYY-MM-DD HH:mm:ss";
 const queryParams = reactive<any>({
   page: 1,
   pageSize: 20,
-  company: user.fullName === "全省" ? "" : user.fullName,
+  company: (user.fullName === "全省" ? "" : user.fullName) || "",
   installPlace: "",
   countType: 1,
   start: "",
@@ -309,11 +346,59 @@ console.log(
   window.$wujie?.props,
   queryParams.company?.length
 );
+
+const videoVisible = ref(false);
+const left = ref<any>(null);
+const top = ref<any>(null);
+let dragging = false;
+let startX = 0;
+let startY = 0;
+const modal = ref<HTMLElement | null>(null);
+const startDrag = (event: MouseEvent) => {
+  dragging = true;
+  startX = event.clientX - modal.value!.getBoundingClientRect().left - 250;
+  startY = event.clientY - modal.value!.getBoundingClientRect().top - 200;
+  window.addEventListener("mousemove", drag);
+  // document.body.style.cursor = 'move';
+};
+const stopDrag = () => {
+  dragging = false;
+  window.removeEventListener("mousemove", drag);
+  // document.body.style.cursor = 'auto';
+};
+const drag = (event: MouseEvent) => {
+  if (dragging) {
+    left.value = event.clientX - startX;
+    top.value = event.clientY - startY;
+  }
+};
+
+const playVideo = (row) => {
+  videoVisible.value = true;
+  nextTick(() => {
+    console.log(modal.value);
+    if (modal.value) {
+      console.log(modal.value);
+      modal.value.addEventListener("mousedown", startDrag);
+      window.addEventListener("mouseup", stopDrag);
+    }
+  });
+};
+let firstdate=<any>[]
+const disableddate=(date:any)=>{
+const minTime = dayjs(firstdate).subtract(29, 'day').valueOf();
+const maxTime = dayjs(firstdate).add(29, 'day').valueOf();
+ return dayjs(date).valueOf() < minTime || dayjs(date).valueOf() > maxTime;
+}
+
+watchEffect(() => {
+  console.log("date发生变化:", date.value);
+});
 // 监听时间区间
 watch(
   time,
   (newValue) => {
-    isExport.value=true
+    isExport.value = true;
     if (newValue == 0) {
       //实时
       queryParams.start = dayjs().startOf("day").format(format);
@@ -334,6 +419,7 @@ watch(
         .startOf("day")
         .format(format);
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
+      isExport.value = false;
     }
     if (newValue == 30) {
       //近一月
@@ -342,7 +428,7 @@ watch(
         .startOf("day")
         .format(format);
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
-      isExport.value=false
+      isExport.value = false;
     }
     if (newValue == 4) return (tableData.value = []);
     // ids.value=[]
@@ -353,11 +439,18 @@ watch(
   },
   { immediate: true }
 );
+//自定义时间提交
+function timeSubmit() {
+  if (!date.value||date.value?.length==0) return ElMessage.warning("请选择查询日期");
+  queryParams.start = dayjs(date.value[0]).startOf("day").format(format);
+  queryParams.end = dayjs(date.value[1]).endOf("day").format(format);
+  handleQuery();
+  dialogVisible2.value = false;
+}
 let allNum: any;
 /** 查询 */
 async function handleQuery() {
   loading.value = true;
-  // console.log(time.value);
   //列表接口
   const res: any = await request
     .post(`/vhcioiset/videoPointHisList?token=${token}`, {
@@ -442,20 +535,15 @@ async function openDialog(row: any) {
   list.value = res.responseData;
 }
 
-//自定义时间提交
-function timeSubmit() {
-  if (!date.value) return ElMessage.warning("请选择查询日期");
-  queryParams.start = dayjs(date.value).startOf("day").format(format);
-  queryParams.end = dayjs(date.value).endOf("day").format(format);
-  handleQuery();
-  dialogVisible2.value = false;
-}
+
 
 /** 关闭表单弹窗 */
 function closeDialog() {
   dialogVisible.value = false;
   dialogVisible2.value = false;
+  videoVisible.value = false;
   currentPage.value = 1;
+  // date.value = [];
 }
 function handleSizeChange(val: number) {
   queryParams.pageSize = val;
@@ -513,8 +601,8 @@ async function handleExport() {
   );
   var params = { ...queryParams };
   //清空防止查询项干扰
-  params.company = ''
-  params.installPlace = ''
+  params.company = "";
+  params.installPlace = "";
   //不同统计依据的处理
   if (params.countType == 1) {
     //管养单位
@@ -530,7 +618,7 @@ async function handleExport() {
     data: { ...params, onFlag: time.value == 0 ? "on" : "off" },
     responseType: "blob",
     cancelToken: source.token,
-    timeout: 120000 
+    timeout: 120000,
   })
     .then((res: any) => {
       console.log(res);
@@ -580,4 +668,42 @@ async function logout() {
         : "/#/login?appName=spzxl");
   });
 }
+function initializePlayer(url: any) {
+  console.log(url);
+  if (Hls.isSupported() && modal.value) {
+    const video: any = modal.value;
+    const hls = new Hls();
+    hls.loadSource(url); // 替换成你的HLS流URL
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.muted = true;
+      video.play();
+    });
+  }
+}
 </script>
+
+<style scoped lang="scss">
+.video-modal {
+  width: 500px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -250px;
+  margin-top: -200px;
+  // border: 1px solid #ccc;
+  box-shadow: 0px 0px 10px 0 rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  background-color: #fff;
+  padding: 0 10px 10px;
+  z-index: 99999;
+
+  &:hover {
+    cursor: move;
+  }
+
+  video {
+    width: 100%;
+  }
+}
+</style>

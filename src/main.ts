@@ -7,9 +7,11 @@ import '@/styles/index.scss'
 import '@/styles/tailwind.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import localeZH from 'element-plus/es/locale/lang/zh-cn'
-
+interface ElementPlusIconsVueModule {
+  [key: string]: any;
+}
 const app = createApp(App)
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+for (const [key, component] of Object.entries<ElementPlusIconsVueModule>(ElementPlusIconsVue)) {
     app.component(key, component)
 }
 app.use(ElementUI, {
