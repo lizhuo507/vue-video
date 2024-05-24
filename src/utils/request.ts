@@ -11,6 +11,7 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // console.log(config.url);
     const accessToken = '51a15d83730941209cb68d6413340bc5'
     //window.$wujie?.props.token
     // if (accessToken) {
@@ -38,6 +39,10 @@ service.interceptors.response.use(
       return Promise.reject(new Error(response.data.msg || 'Error'))
   },
   (error: any) => {
+    console.log('error', error)
+    ElMessage.error({
+      message: error.message,
+    })
     return Promise.reject(error);
   }
 );

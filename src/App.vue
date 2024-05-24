@@ -4,7 +4,9 @@
       <h4 class="pb-1 pl-1 flex justify-between items-center">
         <el-text truncated> 视频在线率统计 </el-text>
         <el-button link type="primary" @click="logout">
-          <el-icon> <SwitchButton /> </el-icon>退出登录</el-button
+          <el-icon>
+            <SwitchButton /> </el-icon
+          >退出登录</el-button
         >
       </h4>
       <div class="search-container">
@@ -201,9 +203,9 @@
           </el-table-column>
           <el-table-column fixed="right" label="操作" width="60">
             <template #default="{ row }">
-              <el-button type="text">
+              <el-button type="primary" link>
                 <el-icon
-                  class="text-[16px] hover:text-[20px]"
+                  class="text-[16px] hover:text-[18px]"
                   @click="playVideo(row)"
                 >
                   <VideoCamera />
@@ -236,7 +238,7 @@
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           :value-format="format"
-          @calendar-change="(val:Date)=>firstdate=val"
+          @calendar-change="(val: Date) => firstdate = val"
           :disabled-date="disableddate"
           placeholder="选择日期范围"
         >
@@ -268,8 +270,11 @@
         :style="{ left: left + 'px', top: top + 'px' }"
         ref="modal"
       >
-        <div class="float-right">
-          <el-button type="text" link
+        <div class="flex justify-between">
+          <el-text>
+            {{ videoTitle }}
+          </el-text>
+          <el-button link
             ><el-icon
               @click="videoVisible = false"
               class="cursor-pointer text-[20px]"
@@ -277,7 +282,9 @@
               <Close /> </el-icon
           ></el-button>
         </div>
-        <video controls src=""></video>
+        <div class="video">
+          <video :controls="true" ref="video" src="" autoplay></video>
+        </div>
       </div>
     </div>
   </div>
@@ -297,6 +304,7 @@ defineOptions({
   inheritAttrs: false,
 });
 const token = "51a15d83730941209cb68d6413340bc5";
+const develop = process.env.NODE_ENV === "development";
 
 const options = ref([
   {
@@ -311,9 +319,7 @@ const options = ref([
 const user = reactive<any>(window.$wujie?.props.roleInfo?.user || {});
 const isCompany = ref<boolean>(
   //不属于视频枢纽部门或者fullName不等于全省
-  process.env.NODE_ENV === "development"
-    ? false
-    : user.deptId !== "10010109" || user.fullName !== "全省"
+  develop ? false : user.deptId !== "10010109" || user.fullName !== "全省"
 );
 const isExport = ref(true);
 const loading = ref(false);
@@ -346,7 +352,6 @@ console.log(
   window.$wujie?.props,
   queryParams.company?.length
 );
-
 const videoVisible = ref(false);
 const left = ref<any>(null);
 const top = ref<any>(null);
@@ -354,10 +359,12 @@ let dragging = false;
 let startX = 0;
 let startY = 0;
 const modal = ref<HTMLElement | null>(null);
+const video = ref<HTMLElement | null>(null);
+const videoTitle = ref<string>("");
 const startDrag = (event: MouseEvent) => {
   dragging = true;
-  startX = event.clientX - modal.value!.getBoundingClientRect().left - 250;
-  startY = event.clientY - modal.value!.getBoundingClientRect().top - 200;
+  startX = event.clientX - modal.value!.getBoundingClientRect().left - 300;
+  startY = event.clientY - modal.value!.getBoundingClientRect().top - 218;
   window.addEventListener("mousemove", drag);
   // document.body.style.cursor = 'move';
 };
@@ -372,24 +379,39 @@ const drag = (event: MouseEvent) => {
     top.value = event.clientY - startY;
   }
 };
-
-const playVideo = (row) => {
+//点击播放
+let hls: any;
+const playVideo = async (row: {
+  camera_index_code: string;
+  camera_name: string;
+}) => {
   videoVisible.value = true;
+  videoTitle.value = row.camera_name;
   nextTick(() => {
-    console.log(modal.value);
     if (modal.value) {
-      console.log(modal.value);
       modal.value.addEventListener("mousedown", startDrag);
       window.addEventListener("mouseup", stopDrag);
     }
   });
+  const res: any = await request.post(
+    `/vhcioiset/videoPointUrl?token=${token}`,
+    {
+      cameraIndexCodes: [row.camera_index_code],
+      streamType: "1",
+    }
+  );
+  hls?.stopLoad();
+  if (!res.data[0].hlsUrl) {
+    ElMessage.error("没有找到视频");
+  }
+  initializePlayer(res.data[0].hlsUrl);
 };
-let firstdate=<any>[]
-const disableddate=(date:any)=>{
-const minTime = dayjs(firstdate).subtract(29, 'day').valueOf();
-const maxTime = dayjs(firstdate).add(29, 'day').valueOf();
- return dayjs(date).valueOf() < minTime || dayjs(date).valueOf() > maxTime;
-}
+let firstdate = <any>[];
+const disableddate = (date: any) => {
+  const minTime = dayjs(firstdate).subtract(29, "day").valueOf();
+  const maxTime = dayjs(firstdate).add(29, "day").valueOf();
+  return dayjs(date).valueOf() < minTime || dayjs(date).valueOf() > maxTime;
+};
 
 watchEffect(() => {
   console.log("date发生变化:", date.value);
@@ -441,7 +463,8 @@ watch(
 );
 //自定义时间提交
 function timeSubmit() {
-  if (!date.value||date.value?.length==0) return ElMessage.warning("请选择查询日期");
+  if (!date.value || date.value?.length == 0)
+    return ElMessage.warning("请选择查询日期");
   queryParams.start = dayjs(date.value[0]).startOf("day").format(format);
   queryParams.end = dayjs(date.value[1]).endOf("day").format(format);
   handleQuery();
@@ -535,15 +558,13 @@ async function openDialog(row: any) {
   list.value = res.responseData;
 }
 
-
-
 /** 关闭表单弹窗 */
 function closeDialog() {
   dialogVisible.value = false;
   dialogVisible2.value = false;
   videoVisible.value = false;
   currentPage.value = 1;
-  // date.value = [];
+  hls?.stopLoad();
 }
 function handleSizeChange(val: number) {
   queryParams.pageSize = val;
@@ -646,7 +667,7 @@ async function handleExport() {
     .catch((error: any) => {
       // fileDown.loadDialogStatus = false;
       window.clearInterval(culPer); //去掉定时器
-      console.log(error);
+      fileDown.loadDialogStatus = false;
       if (axios.isCancel(error)) {
         ElMessage.info(error.message);
         fileDown.loadDialogStatus = false;
@@ -663,35 +684,38 @@ async function logout() {
   window.$wujie.props.logoutSilent(false).then(() => {
     window.$wujie.props.getWindow().location.href =
       location.origin +
-      (process.env.NODE_ENV === "development"
-        ? "/out/#/login?pwd=1&appName=spzxl"
-        : "/#/login?appName=spzxl");
+      (develop ? "/out/#/login?pwd=1&appName=spzxl" : "/#/login?appName=spzxl");
   });
 }
 function initializePlayer(url: any) {
-  console.log(url);
-  if (Hls.isSupported() && modal.value) {
-    const video: any = modal.value;
-    const hls = new Hls();
-    hls.loadSource(url); // 替换成你的HLS流URL
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.muted = true;
-      video.play();
-    });
+  // console.log(url);
+  if (Hls.isSupported() && video.value) {
+    try {
+      const videoModal: any = video.value;
+      hls = new Hls();
+      hls.loadSource(url); // 替换成你的HLS流URL
+      hls.attachMedia(videoModal);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoModal.muted = true;
+        videoModal.play();
+      });
+    } catch (error) {
+      console.log("error", error);
+    }
   }
 }
 </script>
 
 <style scoped lang="scss">
 .video-modal {
-  width: 500px;
+  width: 600px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   position: absolute;
   top: 50%;
   left: 50%;
-  margin-left: -250px;
-  margin-top: -200px;
-  // border: 1px solid #ccc;
+  transform: translate(-50%, -50%);
   box-shadow: 0px 0px 10px 0 rgba(0, 0, 0, 0.5);
   border-radius: 8px;
   background-color: #fff;
@@ -702,8 +726,33 @@ function initializePlayer(url: any) {
     cursor: move;
   }
 
-  video {
-    width: 100%;
+  .video {
+    width: 580px;
+    height: 400px;
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      cursor: pointer;
+
+      /* 隐藏视频播放器进度条 */
+      &::-webkit-media-controls-timeline {
+        display: none;
+      }
+
+      &::-webkit-media-controls-current-time-display {
+        display: none;
+      }
+
+      &::-webkit-media-controls-current-time-display {
+        display: none;
+      }
+
+      &::-webkit-media-controls-time-remaining-display {
+        display: none;
+      }
+    }
   }
 }
 </style>
