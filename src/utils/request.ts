@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 // 创建 axios 实例
 const service = axios.create({
     baseURL:process.env.NODE_ENV === 'development' ? '/api2' : 'https://spsn.jtyst.zj.gov.cn:8001/api2',
-    timeout: 10000,
+    // timeout: 1000,
     headers: { 'Content-Type': 'application/json;charset=utf-8' },
 })
 

@@ -639,7 +639,7 @@ async function handleExport() {
     data: { ...params, onFlag: time.value == 0 ? "on" : "off" },
     responseType: "blob",
     cancelToken: source.token,
-    timeout: 120000,
+    // timeout: 1000,
   })
     .then((res: any) => {
       console.log(res);
