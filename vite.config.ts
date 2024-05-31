@@ -37,14 +37,22 @@ export default defineConfig({
         cors: true,
         proxy: {
             /** 代理前缀为 /api 的请求  */
-            '/api2': {
+            '/api1': {
                 changeOrigin: true,
                 // 接口地址
                 target: 'http://10.100.13.196:8888',
                 // target: 'http://10.100.13.166:8888',
                 // target: 'http://10.145.150.153:8888',
-                rewrite: (path) => path.replace(/^\/api2/, ''),
+                rewrite: (path) => path.replace(/^\/api1/, ''),
             },
+            '/api2': {
+              changeOrigin: true,
+              // 接口地址
+              // target: 'http://10.100.13.196:8888',
+              // target: 'http://10.100.13.166:8888',
+              target: 'http://10.145.150.153:8888',
+              rewrite: (path) => path.replace(/^\/api2/, ''),
+          },
         },
     },
     build: {

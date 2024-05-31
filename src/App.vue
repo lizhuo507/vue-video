@@ -4,9 +4,7 @@
       <h4 class="pb-1 pl-1 flex justify-between items-center">
         <el-text truncated> 视频在线率统计 </el-text>
         <el-button link type="primary" @click="logout">
-          <el-icon>
-            <SwitchButton /> </el-icon
-          >退出登录</el-button
+          <el-icon> <SwitchButton /> </el-icon>退出登录</el-button
         >
       </h4>
       <div class="search-container">
@@ -26,7 +24,7 @@
             prop="keywords"
             :label="queryParams.countType == 1 ? '管养单位' : '路段名称'"
           >
-            <el-input
+            <!-- <el-input
               :style="{
                 width:
                   120 + (queryParams.installPlace?.length || 0) * 10 + 'px',
@@ -36,6 +34,20 @@
                 queryParams.countType == 1 ? '管养单位' : '路段名称'
               "
               clearable
+            /> -->
+            <el-autocomplete
+              v-model.trim="installPlace"
+              :fetch-suggestions="querySearch"
+              clearable
+              :style="{
+                width: 120 + (installPlace?.length || 0) * 10 + 'px',
+              }"
+              :value-key="queryParams.countType == 1 ? 'name' : 'nameValue'"
+              class="inline-input w-50"
+              :placeholder="
+                queryParams.countType == 1 ? '管养单位' : '路段名称'
+              "
+              @select="handleSelect"
             />
           </el-form-item>
           <el-form-item prop="keywords" label="设置阈值(%)">
@@ -88,7 +100,7 @@
               <el-radio-button label="近一周" :value="7" />
               <el-radio-button label="近30天" :value="30" />
               <el-radio-button
-                label="自定义"
+                :label="showDate.length>0?showDate[0]+` ~ `+showDate[1]:'自定义'"
                 :value="4"
                 @click="dialogVisible2 = true"
               />
@@ -237,12 +249,17 @@
           type="daterange"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-          :value-format="format"
+          value-format="YYYY-MM-DD"
           @calendar-change="(val: Date) => firstdate = val"
-          :disabled-date="disableddate"
+          :disabled-date="disabledDate"
           placeholder="选择日期范围"
         >
         </el-date-picker>
+        <!-- <el-text class="text-red-500 text-[12px]">
+          温馨提示：<br>
+         自定义时间区间为1天时，可查询导出明细，<br>
+         自定义时间区间大于1天时，不支持查询导出明细。
+        </el-text> -->
         <template #footer>
           <div class="dialog-footer">
             <el-button type="primary" @click="timeSubmit">确 定</el-button>
@@ -298,7 +315,7 @@ import request from "@/utils/request";
 import axios from "axios";
 import dayjs from "dayjs";
 import Hls from "hls.js";
-
+import { isMoreThanOneDay } from "@/utils";
 defineOptions({
   name: "Dashboard",
   inheritAttrs: false,
@@ -345,6 +362,8 @@ const queryParams = reactive<any>({
   threshold: 0, //设为0,查全部
 });
 
+const installPlace = ref<string>(""); //搜索后赋值给queryParams.installPlace
+
 const threshold = ref<number>(100);
 const time = ref<number>(0); //时间区间
 console.log(
@@ -379,6 +398,19 @@ const drag = (event: MouseEvent) => {
     top.value = event.clientY - startY;
   }
 };
+let queryList: any = [];
+const querySearch = async (queryString: string, cb: any) => {
+  console.log(queryString);
+  let res: any = await request.post(`/vhcioiset/videoGetName?token=${token}`, {
+    name: queryString,
+    countType: queryParams.countType,
+  });
+  if (queryParams.countType == 2) queryList = res;
+  cb(res);
+};
+const handleSelect = (item: any) => {
+  console.log(item);
+};
 //点击播放
 let hls: any;
 const playVideo = async (row: {
@@ -393,6 +425,9 @@ const playVideo = async (row: {
       window.addEventListener("mouseup", stopDrag);
     }
   });
+  videoRequest(row);
+};
+const videoRequest = async (row: any): Promise<any> => {
   const res: any = await request.post(
     `/vhcioiset/videoPointUrl?token=${token}`,
     {
@@ -400,17 +435,22 @@ const playVideo = async (row: {
       streamType: "1",
     }
   );
+  if (!res) return videoRequest(row);
   hls?.stopLoad();
   if (!res.data[0].hlsUrl) {
     ElMessage.error("没有找到视频");
   }
   initializePlayer(res.data[0].hlsUrl);
 };
+
+//禁用时间
 let firstdate = <any>[];
-const disableddate = (date: any) => {
+const disabledDate = (date: any) => {
   const minTime = dayjs(firstdate).subtract(29, "day").valueOf();
   const maxTime = dayjs(firstdate).add(29, "day").valueOf();
-  return dayjs(date).valueOf() < minTime || dayjs(date).valueOf() > maxTime;
+  const disabledTime=dayjs(date).valueOf()
+  const yesterday=dayjs().subtract(1, 'day').valueOf()
+  return disabledTime < minTime ||disabledTime>maxTime|| disabledTime>yesterday;
 };
 
 watchEffect(() => {
@@ -441,7 +481,7 @@ watch(
         .startOf("day")
         .format(format);
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
-      isExport.value = false;
+      // isExport.value = false;
     }
     if (newValue == 30) {
       //近一月
@@ -450,7 +490,7 @@ watch(
         .startOf("day")
         .format(format);
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
-      isExport.value = false;
+      // isExport.value = false;
     }
     if (newValue == 4) return (tableData.value = []);
     // ids.value=[]
@@ -461,20 +501,32 @@ watch(
   },
   { immediate: true }
 );
+
 //自定义时间提交
+const showDate=ref<any[]>([])
 function timeSubmit() {
   if (!date.value || date.value?.length == 0)
-    return ElMessage.warning("请选择查询日期");
+  return ElMessage.warning("请选择查询日期");
+  showDate.value=date.value
   queryParams.start = dayjs(date.value[0]).startOf("day").format(format);
   queryParams.end = dayjs(date.value[1]).endOf("day").format(format);
+  // isExport.value =date.value[0]===date.value[1]
   handleQuery();
   dialogVisible2.value = false;
 }
-let allNum: any;
+
 /** 查询 */
+let allNum: any;
 async function handleQuery() {
   loading.value = true;
   //列表接口
+  if (queryParams.countType == 2) {
+    queryParams.installPlace =
+      queryList.find((e: any) => e.nameValue === installPlace.value)?.name ||
+      installPlace.value;
+  } else {
+    queryParams.installPlace = installPlace.value;
+  }
   const res: any = await request
     .post(`/vhcioiset/videoPointHisList?token=${token}`, {
       ...queryParams,
@@ -500,6 +552,7 @@ async function handleQuery() {
 function onChange() {
   queryParams.page = 1;
   queryParams.pageSize = 20;
+  installPlace.value = "";
   handleQuery();
 }
 function currentPageChange(val: number) {
@@ -611,14 +664,14 @@ async function handleExport() {
     () => {
       let per = fileDown.percentage;
       console.log("当前下载进度：" + per);
-      if (per > 89) {
+      if (per > 79) {
         fileDown.percentage = 99;
         return;
       }
-      let addNum = getRandom(0, 10);
+      let addNum = getRandom(0, 20);
       fileDown.percentage = per + addNum;
     },
-    ids.value.length > 50 ? 1000 : 500
+    ids.value.length > 50 ? 500 : 100
   );
   var params = { ...queryParams };
   //清空防止查询项干扰
@@ -635,8 +688,13 @@ async function handleExport() {
   }
   request({
     method: "post",
+    baseURL: import.meta.env.VITE_APP_BASE_URL_1,
     url: `/vhcioiset/getVideoPointExcel?token=${token}`,
-    data: { ...params, onFlag: time.value == 0 ? "on" : "off" },
+    data: {
+      ...params,
+      onFlag: time.value == 0 ? "on" : "off",
+      twoRate: isTwo(params),
+    },
     responseType: "blob",
     cancelToken: source.token,
     // timeout: 1000,
@@ -669,11 +727,18 @@ async function handleExport() {
       window.clearInterval(culPer); //去掉定时器
       fileDown.loadDialogStatus = false;
       if (axios.isCancel(error)) {
-        ElMessage.info(error.message);
-        fileDown.loadDialogStatus = false;
+        // ElMessage.info(error.message);
+        // fileDown.loadDialogStatus = false;
         // 请求被取消处理逻辑
       }
     });
+}
+function isTwo(params: any) {
+  const time = isMoreThanOneDay(params.start, params.end);
+  console.log(time + "天");
+  if (time < 1) return "";
+  if (time === 2) return "two";
+  if (time > 1 && time !== 2) return "on";
 }
 async function logout() {
   // console.log(location);
@@ -693,7 +758,7 @@ function initializePlayer(url: any) {
     try {
       const videoModal: any = video.value;
       hls = new Hls();
-      hls.loadSource(url); // 替换成你的HLS流URL
+      hls.loadSource(convertToHttps(url)); // 替换成你的HLS流URL
       hls.attachMedia(videoModal);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoModal.muted = true;
@@ -703,6 +768,14 @@ function initializePlayer(url: any) {
       console.log("error", error);
     }
   }
+}
+function convertToHttps(url: string) {
+  // 如果 URL 以 "http://" 开头，则替换为 "https://"
+  if (url.startsWith("http://")) {
+    return "https://" + url.slice(7);
+  }
+  // 如果 URL 以其他协议开头或已经是 HTTPS，则直接返回原始 URL
+  return url;
 }
 </script>
 

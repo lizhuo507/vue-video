@@ -18,7 +18,7 @@
     },
     "types": [
       "element-plus/global",
-      "node"
+      "node",
     ],
     "allowSyntheticDefaultImports": true /* 允许默认导入 */,
     "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
