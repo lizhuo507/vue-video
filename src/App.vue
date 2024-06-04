@@ -100,7 +100,7 @@
               <el-radio-button label="近一周" :value="7" />
               <el-radio-button label="近30天" :value="30" />
               <el-radio-button
-                :label="showDate.length>0?showDate[0]+` ~ `+showDate[1]:'自定义'"
+                :label="(showDate.length>0&&time===4)?showDate[0]+` ~ `+showDate[1]:'自定义'"
                 :value="4"
                 @click="dialogVisible2 = true"
               />
@@ -144,7 +144,22 @@
             :label="time === 0 ? '实时在线率' : '平均在线率'"
             prop="online_rate"
           >
-            <template #default="{ row }">
+          <template #header="{row}">
+<div>
+      <el-tooltip
+				class="item"
+				effect="dark"
+				:content="time === 0 ?'每五分钟更新一次':'在线数/接入数'"
+				placement="top-start"
+			>
+      <el-text>
+        <el-icon class="tips"><InfoFilled /></el-icon>
+        {{time === 0 ? '实时在线率' : '平均在线率'}}
+      </el-text>
+			</el-tooltip>
+    </div>
+          </template>
+            <template #default="{ row }" >
               <span
                 :class="{
                   'text-red-500':
@@ -241,6 +256,8 @@
         v-model="dialogVisible2"
         title="自定义日期"
         width="450px"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
         @close="closeDialog"
       >
         <el-date-picker
@@ -255,11 +272,13 @@
           placeholder="选择日期范围"
         >
         </el-date-picker>
-        <!-- <el-text class="text-red-500 text-[12px]">
+        <div class="mt-[20px]">
+          <el-text class="text-red-500 text-[12px] ">
           温馨提示：<br>
          自定义时间区间为1天时，可查询导出明细，<br>
          自定义时间区间大于1天时，不支持查询导出明细。
-        </el-text> -->
+        </el-text>
+        </div>
         <template #footer>
           <div class="dialog-footer">
             <el-button type="primary" @click="timeSubmit">确 定</el-button>
@@ -310,7 +329,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed, nextTick, watchEffect } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Search, Download } from "@element-plus/icons-vue";
+import { Search, Download,InfoFilled } from "@element-plus/icons-vue";
 import request from "@/utils/request";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -399,7 +418,7 @@ const drag = (event: MouseEvent) => {
   }
 };
 let queryList: any = [];
-const querySearch = async (queryString: string, cb: any) => {
+const querySearch = async (queryString: string, cb: any):Promise<any> => {
   console.log(queryString);
   let res: any = await request.post(`/vhcioiset/videoGetName?token=${token}`, {
     name: queryString,
@@ -456,11 +475,14 @@ const disabledDate = (date: any) => {
 watchEffect(() => {
   console.log("date发生变化:", date.value);
 });
+const showDate=ref<any[]>([])
+
 // 监听时间区间
 watch(
   time,
-  (newValue) => {
+  (newValue,oldValue) => {
     isExport.value = true;
+    showDate.value=[]
     if (newValue == 0) {
       //实时
       queryParams.start = dayjs().startOf("day").format(format);
@@ -492,9 +514,11 @@ watch(
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
       // isExport.value = false;
     }
-    if (newValue == 4) return (tableData.value = []);
-    // ids.value=[]
-    // queryParams.company=user.fullName
+    if (newValue == 4) { 
+      // tableData.value = []
+      date.value=[]
+      return
+    };
 
     queryParams.page = 1;
     handleQuery();
@@ -503,14 +527,12 @@ watch(
 );
 
 //自定义时间提交
-const showDate=ref<any[]>([])
 function timeSubmit() {
   if (!date.value || date.value?.length == 0)
   return ElMessage.warning("请选择查询日期");
   showDate.value=date.value
   queryParams.start = dayjs(date.value[0]).startOf("day").format(format);
   queryParams.end = dayjs(date.value[1]).endOf("day").format(format);
-  // isExport.value =date.value[0]===date.value[1]
   handleQuery();
   dialogVisible2.value = false;
 }
@@ -613,9 +635,9 @@ async function openDialog(row: any) {
 
 /** 关闭表单弹窗 */
 function closeDialog() {
-  dialogVisible.value = false;
-  dialogVisible2.value = false;
-  videoVisible.value = false;
+  dialogVisible.value = false; //详情
+  dialogVisible2.value = false; //自定义
+  videoVisible.value = false;  //视频播放
   currentPage.value = 1;
   hls?.stopLoad();
 }
@@ -688,7 +710,6 @@ async function handleExport() {
   }
   request({
     method: "post",
-    baseURL: import.meta.env.VITE_APP_BASE_URL_1,
     url: `/vhcioiset/getVideoPointExcel?token=${token}`,
     data: {
       ...params,
@@ -780,6 +801,10 @@ function convertToHttps(url: string) {
 </script>
 
 <style scoped lang="scss">
+.tips{
+  color:var(--el-color-primary);
+  margin-top: 4px !important;
+}
 .video-modal {
   width: 600px;
   display: flex;
