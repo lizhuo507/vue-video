@@ -24,17 +24,6 @@
             prop="keywords"
             :label="queryParams.countType == 1 ? '管养单位' : '路段名称'"
           >
-            <!-- <el-input
-              :style="{
-                width:
-                  120 + (queryParams.installPlace?.length || 0) * 10 + 'px',
-              }"
-              v-model="queryParams.installPlace"
-              :placeholder="
-                queryParams.countType == 1 ? '管养单位' : '路段名称'
-              "
-              clearable
-            /> -->
             <el-autocomplete
               v-model.trim="installPlace"
               :fetch-suggestions="querySearch"
@@ -100,7 +89,11 @@
               <el-radio-button label="近一周" :value="7" />
               <el-radio-button label="近30天" :value="30" />
               <el-radio-button
-                :label="(showDate.length>0&&time===4)?showDate[0]+` ~ `+showDate[1]:'自定义'"
+                :label="
+                  showDate.length > 0 && time === 4
+                    ? showDate[0] + ` ~ ` + showDate[1]
+                    : '自定义'
+                "
                 :value="4"
                 @click="dialogVisible2 = true"
               />
@@ -144,22 +137,22 @@
             :label="time === 0 ? '实时在线率' : '平均在线率'"
             prop="online_rate"
           >
-          <template #header="{row}">
-<div>
-      <el-tooltip
-				class="item"
-				effect="dark"
-				:content="time === 0 ?'每五分钟更新一次':'在线数/接入数'"
-				placement="top-start"
-			>
-      <el-text>
-        <el-icon class="tips"><InfoFilled /></el-icon>
-        {{time === 0 ? '实时在线率' : '平均在线率'}}
-      </el-text>
-			</el-tooltip>
-    </div>
-          </template>
-            <template #default="{ row }" >
+            <template #header="{ row }">
+              <div>
+                <el-tooltip
+                  class="item"
+                  effect="dark"
+                  :content="time==0? '每五分钟更新一次' :getDayCount(queryParams)==''?'6点至23:30，每半小时检测一次，在线则加30分钟。累计时长≥600分钟，视为全天在线。':'多天在线率相加/对应天数'"
+                  placement="top-start"
+                >
+                  <el-text>
+                    <el-icon class="tips"><InfoFilled /></el-icon>
+                    {{ time === 0 ? "实时在线率" : "平均在线率" }}
+                  </el-text>
+                </el-tooltip>
+              </div>
+            </template>
+            <template #default="{ row }">
               <span
                 :class="{
                   'text-red-500':
@@ -273,11 +266,11 @@
         >
         </el-date-picker>
         <div class="mt-[20px]">
-          <el-text class="text-red-500 text-[12px] ">
-          温馨提示：<br>
-         自定义时间区间为1天时，可查询导出明细，<br>
-         自定义时间区间大于1天时，不支持查询导出明细。
-        </el-text>
+          <el-text class="text-red-500 text-[12px]">
+            温馨提示：<br />
+            自定义时间区间为1天时，可查询导出明细，<br />
+            自定义时间区间大于1天时，不支持查询导出明细。
+          </el-text>
         </div>
         <template #footer>
           <div class="dialog-footer">
@@ -329,7 +322,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed, nextTick, watchEffect } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Search, Download,InfoFilled } from "@element-plus/icons-vue";
+import { Search, Download, InfoFilled } from "@element-plus/icons-vue";
 import request from "@/utils/request";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -418,7 +411,7 @@ const drag = (event: MouseEvent) => {
   }
 };
 let queryList: any = [];
-const querySearch = async (queryString: string, cb: any):Promise<any> => {
+const querySearch = async (queryString: string, cb: any): Promise<any> => {
   console.log(queryString);
   let res: any = await request.post(`/vhcioiset/videoGetName?token=${token}`, {
     name: queryString,
@@ -467,22 +460,24 @@ let firstdate = <any>[];
 const disabledDate = (date: any) => {
   const minTime = dayjs(firstdate).subtract(29, "day").valueOf();
   const maxTime = dayjs(firstdate).add(29, "day").valueOf();
-  const disabledTime=dayjs(date).valueOf()
-  const yesterday=dayjs().subtract(1, 'day').valueOf()
-  return disabledTime < minTime ||disabledTime>maxTime|| disabledTime>yesterday;
+  const disabledTime = dayjs(date).valueOf();
+  const yesterday = dayjs().subtract(1, "day").valueOf();
+  return (
+    disabledTime < minTime || disabledTime > maxTime || disabledTime > yesterday
+  );
 };
 
 watchEffect(() => {
   console.log("date发生变化:", date.value);
 });
-const showDate=ref<any[]>([])
+const showDate = ref<any[]>([]);
 
 // 监听时间区间
 watch(
   time,
-  (newValue,oldValue) => {
+  (newValue, oldValue) => {
     isExport.value = true;
-    showDate.value=[]
+    showDate.value = [];
     if (newValue == 0) {
       //实时
       queryParams.start = dayjs().startOf("day").format(format);
@@ -514,11 +509,11 @@ watch(
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
       // isExport.value = false;
     }
-    if (newValue == 4) { 
+    if (newValue == 4) {
       // tableData.value = []
-      date.value=[]
-      return
-    };
+      date.value = [];
+      return;
+    }
 
     queryParams.page = 1;
     handleQuery();
@@ -529,8 +524,8 @@ watch(
 //自定义时间提交
 function timeSubmit() {
   if (!date.value || date.value?.length == 0)
-  return ElMessage.warning("请选择查询日期");
-  showDate.value=date.value
+    return ElMessage.warning("请选择查询日期");
+  showDate.value = date.value;
   queryParams.start = dayjs(date.value[0]).startOf("day").format(format);
   queryParams.end = dayjs(date.value[1]).endOf("day").format(format);
   handleQuery();
@@ -637,7 +632,7 @@ async function openDialog(row: any) {
 function closeDialog() {
   dialogVisible.value = false; //详情
   dialogVisible2.value = false; //自定义
-  videoVisible.value = false;  //视频播放
+  videoVisible.value = false; //视频播放
   currentPage.value = 1;
   hls?.stopLoad();
 }
@@ -714,7 +709,7 @@ async function handleExport() {
     data: {
       ...params,
       onFlag: time.value == 0 ? "on" : "off",
-      twoRate: isTwo(params),
+      twoRate: getDayCount(params),
     },
     responseType: "blob",
     cancelToken: source.token,
@@ -754,12 +749,16 @@ async function handleExport() {
       }
     });
 }
-function isTwo(params: any) {
+function getDayCount(params: any) {
   const time = isMoreThanOneDay(params.start, params.end);
   console.log(time + "天");
-  if (time < 1) return "";
-  if (time === 2) return "two";
-  if (time > 1 && time !== 2) return "on";
+  if (time === 1) {
+    return "";
+  }else if (time === 2) {
+    return "two";
+  } else {
+    return "on";
+  }
 }
 async function logout() {
   // console.log(location);
@@ -801,8 +800,8 @@ function convertToHttps(url: string) {
 </script>
 
 <style scoped lang="scss">
-.tips{
-  color:var(--el-color-primary);
+.tips {
+  color: var(--el-color-primary);
   margin-top: 4px !important;
 }
 .video-modal {
