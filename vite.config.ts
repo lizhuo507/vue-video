@@ -40,17 +40,17 @@ export default defineConfig({
             '/api1': {
                 changeOrigin: true,
                 // 接口地址
-                // target: 'http://10.100.13.196:8888',
+                target: 'http://10.100.13.196:8888',
                 // target: 'http://10.100.13.166:8888',
-                target: 'http://10.145.150.153:8888',
+                // target: 'http://10.145.150.153:8888',
                 rewrite: (path) => path.replace(/^\/api1/, ''),
             },
             '/api2': {
               changeOrigin: true,
               // 接口地址
-              // target: 'http://10.100.13.196:8888',
+              target: 'http://10.100.13.196:8888',
               // target: 'http://10.100.13.166:8888',
-              target: 'http://10.145.150.153:8888',
+              // target: 'http://10.145.150.153:8888',
               rewrite: (path) => path.replace(/^\/api2/, ''),
           },
         },

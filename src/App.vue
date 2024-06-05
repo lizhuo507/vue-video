@@ -167,7 +167,7 @@
             fixed="right"
             label="操作"
             width="150"
-            v-if="time !== 7 && time !== 30"
+            v-if="getDayCount(queryParams)==''"
           >
             <template #default="{ row }">
               <el-button type="primary" link @click="openDialog(row)">
@@ -584,17 +584,14 @@ function getSummaries(param: any) {
     if (index === 0) {
       sums[index] = "合计";
     }
-    if (index === 1) {
-      sums[index] = "";
-    }
     if (index === 3) {
-      sums[index] = allNum?.collect_num || "-";
+      sums[index] = String(allNum?.collect_num) || "-";
     }
     if (index === 4) {
-      sums[index] = allNum?.online_num || "-";
+      sums[index] = String(allNum?.online_num) || "-";
     }
     if (index === 5) {
-      sums[index] = allNum?.outline_num || "-";
+      sums[index] = String(allNum?.outline_num) || "-";
     }
     if (index === 6) {
       sums[index] = allNum?.online_rate || "-";
