@@ -22,7 +22,7 @@
           </el-form-item>
           <el-form-item
             prop="keywords"
-            :label="queryParams.countType == 1 ? '管养单位' : '路段名称'"
+            :label="queryParams.countType == 11 ? '管养单位' : '路段名称'"
           >
             <el-autocomplete
               v-model.trim="installPlace"
@@ -31,10 +31,10 @@
               :style="{
                 width: 120 + (installPlace?.length || 0) * 10 + 'px',
               }"
-              :value-key="queryParams.countType == 1 ? 'name' : 'nameValue'"
+              :value-key="queryParams.countType == 11 ? 'name' : 'nameValue'"
               class="inline-input w-50"
               :placeholder="
-                queryParams.countType == 1 ? '管养单位' : '路段名称'
+                queryParams.countType == 11 ? '管养单位' : '路段名称'
               "
               @select="handleSelect"
             />
@@ -118,7 +118,7 @@
           <el-table-column type="selection" width="55" align="center" />
           <el-table-column label="路公司名称" prop="company" width="400" />
           <el-table-column
-            v-if="queryParams.countType == 1"
+            v-if="queryParams.countType == 11"
             label="管养单位"
             prop="road_sec"
             width="400"
@@ -338,11 +338,11 @@ const develop = process.env.NODE_ENV === "development";
 const options = ref([
   {
     label: "管养单位",
-    value: 1,
+    value: 11,
   },
   {
     label: "路段名称",
-    value: 2,
+    value: 22,
   },
 ]);
 const user = reactive<any>(window.$wujie?.props.roleInfo?.user || {});
@@ -356,7 +356,6 @@ const dialogLoading = ref(false);
 const ids = ref<string[]>([]);
 const total = ref<number>(0);
 const date = ref<any>([]);
-
 const tableData = ref<any[]>([]);
 const list = ref<any[]>([]);
 const dialogVisible = ref<boolean>(false);
@@ -368,7 +367,7 @@ const queryParams = reactive<any>({
   pageSize: 20,
   company: (user.fullName === "全省" ? "" : user.fullName) || "",
   installPlace: "",
-  countType: 1,
+  countType: 11,
   start: "",
   end: "",
   threshold: 0, //设为0,查全部
@@ -417,7 +416,7 @@ const querySearch = async (queryString: string, cb: any): Promise<any> => {
     name: queryString,
     countType: queryParams.countType,
   });
-  if (queryParams.countType == 2) queryList = res;
+  if (queryParams.countType == 22) queryList = res;
   cb(res);
 };
 const handleSelect = (item: any) => {
@@ -537,7 +536,7 @@ let allNum: any;
 async function handleQuery() {
   loading.value = true;
   //列表接口
-  if (queryParams.countType == 2) {
+  if (queryParams.countType == 22) {
     queryParams.installPlace =
       queryList.find((e: any) => e.nameValue === installPlace.value)?.name ||
       installPlace.value;
@@ -604,7 +603,7 @@ async function openDialog(row: any) {
   dialogLoading.value = true;
   // list.value=[]
   const params = { ...queryParams };
-  if (params.countType == 1) {
+  if (params.countType == 11) {
     params.company = row.road_sec;
   } else {
     params.company = row.road_sec;
@@ -650,7 +649,7 @@ function getRandom(min: number, max: number) {
 
 /** 行checkbox 选中事件 */
 function handleSelectionChange(selection: any) {
-  if (queryParams.countType == 1) {
+  if (queryParams.countType == 11) {
     //管养单位
     ids.value = selection.map((item: any) => item.road_sec);
   } else {
@@ -692,7 +691,7 @@ async function handleExport() {
   params.company = "";
   params.installPlace = "";
   //不同统计依据的处理
-  if (params.countType == 1) {
+  if (params.countType == 11) {
     //管养单位
     params.company = ids.value;
   } else {
