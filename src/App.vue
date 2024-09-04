@@ -13,9 +13,9 @@
             <el-input
               v-model="queryParams.company"
               :style="{
-                width: 120 + (queryParams.company?.length || 0) * 10 + 'px',
+                width: 130 + (queryParams.company?.length || 0) * 10 + 'px',
               }"
-              placeholder="路公司名称"
+              :placeholder="isCompany?'路公司名称':'请输入公司全称'"
               clearable
               :disabled="isCompany"
             />
@@ -414,7 +414,7 @@ const querySearch = async (queryString: string, cb: any): Promise<any> => {
   console.log(queryString);
   let res: any = await request.post(`/vhcioiset/videoGetName?token=${token}`, {
     name: queryString,
-    countType: queryParams.countType,
+    countType: queryParams.countType==11?1:2,
   });
   if (queryParams.countType == 22) queryList = res;
   cb(res);
@@ -477,7 +477,19 @@ watch(
   (newValue, oldValue) => {
     isExport.value = true;
     showDate.value = [];
-    if (newValue == 0) {
+    timeFunction(newValue)
+    if (newValue == 4) {
+      // tableData.value = []
+      date.value = [];
+      return;
+    }
+    queryParams.page = 1;
+    handleQuery();
+  },
+  { immediate: true }
+);
+function timeFunction(newValue:number){
+  if (newValue == 0) {
       //实时
       queryParams.start = dayjs().startOf("day").format(format);
       queryParams.end = dayjs().format(format);
@@ -508,18 +520,7 @@ watch(
       queryParams.end = dayjs().subtract(1, "day").endOf("day").format(format);
       // isExport.value = false;
     }
-    if (newValue == 4) {
-      // tableData.value = []
-      date.value = [];
-      return;
-    }
-
-    queryParams.page = 1;
-    handleQuery();
-  },
-  { immediate: true }
-);
-
+}
 //自定义时间提交
 function timeSubmit() {
   if (!date.value || date.value?.length == 0)
@@ -530,12 +531,11 @@ function timeSubmit() {
   handleQuery();
   dialogVisible2.value = false;
 }
-
 /** 查询 */
 let allNum: any;
 async function handleQuery() {
   loading.value = true;
-  //列表接口
+  timeFunction(time.value)
   if (queryParams.countType == 22) {
     queryParams.installPlace =
       queryList.find((e: any) => e.nameValue === installPlace.value)?.name ||
@@ -543,8 +543,9 @@ async function handleQuery() {
   } else {
     queryParams.installPlace = installPlace.value;
   }
+  //列表接口
   const res: any = await request
-    .post(`/vhcioiset/videoPointHisList?token=${token}`, {
+    .post(`/vhcioiset/videoPointHisList?token=${token}&timestamp=${dayjs().valueOf()}`, {
       ...queryParams,
       onFlag: time.value == 0 ? "on" : "off",
     })
@@ -555,7 +556,7 @@ async function handleQuery() {
       loading.value = false;
     });
   //合计接口
-  allNum = await request.post(`/vhcioiset/videoPointSumList?token=${token}`, {
+  allNum = await request.post(`/vhcioiset/videoPointSumList?token=${token}&timestamp=${dayjs().valueOf()}`, {
     ...queryParams,
     onFlag: time.value == 0 ? "on" : "off",
   });
@@ -584,13 +585,13 @@ function getSummaries(param: any) {
       sums[index] = "合计";
     }
     if (index === 3) {
-      sums[index] = String(allNum?.collect_num) || "-";
+      sums[index] = allNum?.collect_num || "-";
     }
     if (index === 4) {
-      sums[index] = String(allNum?.online_num) || "-";
+      sums[index] = allNum?.online_num || "-";
     }
     if (index === 5) {
-      sums[index] = String(allNum?.outline_num) || "-";
+      sums[index] = allNum?.outline_num || "-";
     }
     if (index === 6) {
       sums[index] = allNum?.online_rate || "-";

@@ -50,5 +50,12 @@ export default defineConfig({
     build: {
       target: 'modules',
       assetsDir: 'static',
+      rollupOptions: {
+        output: {
+          entryFileNames: `static/[name].[hash].js`,
+          chunkFileNames: `static/[name].[hash].js`,
+          assetFileNames: `static/[name].[hash].[ext]`,
+        }
+      },
     }
 })
