@@ -2,7 +2,9 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from 'tailwindcss'
 import { resolve } from "path";
-
+const timestamp = new Date().getTime()
+const version = require('./src/utils/version')
+version.create()
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [vue()],
@@ -48,13 +50,11 @@ export default defineConfig({
         },
     },
     build: {
-      target: 'modules',
-      assetsDir: 'static',
       rollupOptions: {
         output: {
-          entryFileNames: `static/[name].[hash].js`,
-          chunkFileNames: `static/[name].[hash].js`,
-          assetFileNames: `static/[name].[hash].[ext]`,
+          entryFileNames: `static/[name].${timestamp}.js`,
+          chunkFileNames: `static/[name].${timestamp}.js`,
+          assetFileNames: `static/[name].${timestamp}.[ext]`,
         }
       },
     }

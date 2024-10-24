@@ -328,6 +328,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import Hls from "hls.js";
 import { isMoreThanOneDay } from "@/utils";
+const version = require('@/utils/version')
 defineOptions({
   name: "Dashboard",
   inheritAttrs: false,
@@ -475,6 +476,7 @@ const showDate = ref<any[]>([]);
 watch(
   time,
   (newValue, oldValue) => {
+    version.getPro() //检测是否有新版本
     isExport.value = true;
     showDate.value = [];
     timeFunction(newValue)
