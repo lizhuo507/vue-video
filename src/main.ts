@@ -7,6 +7,8 @@ import '@/styles/index.scss'
 import '@/styles/tailwind.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import localeZH from 'element-plus/es/locale/lang/zh-cn'
+import router from './router'
+
 interface ElementPlusIconsVueModule {
   [key: string]: any;
 }
@@ -14,7 +16,8 @@ const app = createApp(App)
 for (const [key, component] of Object.entries<ElementPlusIconsVueModule>(ElementPlusIconsVue)) {
     app.component(key, component)
 }
-app.use(ElementUI, {
+app.use(router)
+   .use(ElementUI, {
     locale: localeZH,
 }).mount('#app')
 
