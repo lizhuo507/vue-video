@@ -39,13 +39,14 @@ export default defineConfig({
         cors: true,
         proxy: {
             /** 代理前缀为 /api2 的请求  */
-            '/api2': {
+            '/api': {
               changeOrigin: true,
               // 接口地址
               // target: 'http://10.100.13.196:8888',
               // target: 'http://10.100.13.166:8888',
-              target: 'http://10.145.150.153:8888',
-              rewrite: (path) => path.replace(/^\/api2/, ''),
+              // target: 'http://10.145.150.153:8888',
+              target: 'https://spsn.jtyst.zj.gov.cn:8001/api2',
+              rewrite: (path) => path.replace(/^\/api/, ''),
           },
         },
     },

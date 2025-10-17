@@ -4,9 +4,9 @@
       <h4 class="pb-1 pl-1 flex justify-between items-center">
         <el-text truncated> 
           {{ getSystemTypeDisplay() }} - 
-          {{ videoQuality.value === '2' ? '高清' : '标清' }}模式 
+          {{ videoQuality === '2' ? '高清' : '标清' }}模式 
         </el-text>
-        <el-button link type="primary" @click="logout">
+        <el-button link type="primary" @click="logout" v-if="0">
           <el-icon> <SwitchButton /> </el-icon>退出登录</el-button
         >
       </h4>
