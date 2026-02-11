@@ -137,7 +137,7 @@
             :label="time === 0 ? '实时在线率' : '平均在线率'"
             prop="online_rate"
           >
-            <template #header="{ row }">
+            <template #header>
               <div>
                 <el-tooltip
                   class="item"
@@ -206,14 +206,17 @@
           <template #empty>
             <el-empty />
           </template>
-          <el-table-column prop="camera_name" label="摄像机名称" />
-          <el-table-column prop="camera_index_code" label="ID" width="300" />
+          <el-table-column prop="camera_name" label="摄像机名称" width="500"/>
+          <el-table-column prop="camera_index_code" label="ID" width="350" />
+         
+          <el-table-column prop="server_name" label="网关名称" width="250" />
+          <el-table-column prop="server_ip" label="网关IP" width="150" />
           <el-table-column
             prop="server_index_code"
             label="网关编号"
             width="300"
           />
-          <el-table-column prop="online_status" label="在线状态" width="80">
+          <el-table-column prop="online_status" label="在线状态" width="100">
             <template #default="{ row }">
               <el-tag v-if="row.online_status === '在线'" type="success"
                 >在线</el-tag
@@ -221,16 +224,39 @@
               <el-tag v-else type="info">离线</el-tag>
             </template>
           </el-table-column>
-          <el-table-column fixed="right" label="操作" width="60">
+          <el-table-column fixed="right" label="操作" width="80">
             <template #default="{ row }">
-              <el-button type="primary" link>
-                <el-icon
-                  class="text-[16px] hover:text-[18px]"
-                  @click="playVideo(row)"
-                >
-                  <VideoCamera />
-                </el-icon>
-              </el-button>
+              <!-- 江西省交通监控指挥中心：显示视频类型下拉菜单 -->
+              <template v-if="isJiangxiCenter">
+                <el-dropdown trigger="click" @command="(cmd) => handleVideoTypeChange(cmd, row)">
+                  <el-button type="primary" link :disabled="row.online_status !== '在线'">
+                    <el-icon class="text-[16px] hover:text-[18px]">
+                      <VideoCamera />
+                    </el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item
+                        v-for="option in videoTypeOptions"
+                        :key="option.value"
+                        :command="option.value"
+                      >
+                        {{ option.label }}
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </template>
+              <!-- 其他角色：原有播放按钮 -->
+              <template v-else>
+                <el-button type="primary" link :disabled="row.online_status !== '在线'" @click="playVideo(row)">
+                  <el-icon
+                    class="text-[16px] hover:text-[18px]"
+                  >
+                    <VideoCamera />
+                  </el-icon>
+                </el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -328,7 +354,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import Hls from "hls.js";
 import { isMoreThanOneDay } from "@/utils";
-const version = require('@/utils/version')
+// const version = require('@/utils/version')
 defineOptions({
   name: "Dashboard",
   inheritAttrs: false,
@@ -350,6 +376,10 @@ const user = reactive<any>(window.$wujie?.props.roleInfo?.user || {});
 const isCompany = ref<boolean>(
   //不属于视频枢纽部门或者fullName不等于全省
   develop ? false : user.deptId !== "10010109" || user.fullName !== "全省"
+);
+// 江西省交通监控指挥中心权限
+const isJiangxiCenter = ref<boolean>(
+  develop ? false : user.fullName === "江西省交通监控指挥中心"
 );
 const isExport = ref(true);
 const loading = ref(false);
@@ -378,6 +408,13 @@ const installPlace = ref<string>(""); //搜索后赋值给queryParams.installPla
 
 const threshold = ref<number>(100);
 const time = ref<number>(0); //时间区间
+const videoType = ref<number>(0); //视频类型：0-标清(128k)，1-1M，2-4M，3-源码率
+const videoTypeOptions = [
+  { label: "标清(128k)", value: 0 },
+  { label: "1M", value: 1 },
+  { label: "4M", value: 2 },
+  { label: "源码率", value: 3 },
+];
 console.log(
   "window.$wujie?.props: ",
   window.$wujie?.props,
@@ -403,6 +440,11 @@ const stopDrag = () => {
   dragging = false;
   window.removeEventListener("mousemove", drag);
   // document.body.style.cursor = 'auto';
+};
+// 选择视频类型并播放
+const handleVideoTypeChange = (cmd: number, row: any) => {
+  videoType.value = cmd;
+  playVideo(row);
 };
 const drag = (event: MouseEvent) => {
   if (dragging) {
@@ -440,19 +482,32 @@ const playVideo = async (row: {
   videoRequest(row);
 };
 const videoRequest = async (row: any): Promise<any> => {
-  const res: any = await request.post(
-    `/vhcioiset/videoPointUrl?token=${token}`,
-    {
-      cameraIndexCodes: [row.camera_index_code],
-      streamType: "1",
+    // 江西省交通监控指挥中心使用新接口
+  if (isJiangxiCenter.value) {
+    const res: any = await request.get(
+      `/vhcioiset/getVideoUrl?token=${token}&CameraID=${row.camera_index_code}&VideoType=${videoType.value}`
+    );
+    hls?.stopLoad();
+    if (!res.data?.VideoUrl||res.code!=200) {
+      ElMessage.error(res.msg||"获取视频失败");
     }
-  );
-  if (!res) return videoRequest(row);
-  hls?.stopLoad();
-  if (!res.data[0].hlsUrl) {
-    ElMessage.error("没有找到视频");
+    initializePlayer(res.data.VideoUrl);
+  } else {
+    // 原有逻辑
+    const res: any = await request.post(
+      `/vhcioiset/videoPointUrl?token=${token}`,
+      {
+        cameraIndexCodes: [row.camera_index_code],
+        streamType: "1",
+      }
+    );
+    if (!res) return videoRequest(row);
+    hls?.stopLoad();
+    if (!res.data?.[0]?.hlsUrl) {
+      ElMessage.error("没有找到视频");
+    }
+    initializePlayer(res.data[0].hlsUrl);
   }
-  initializePlayer(res.data[0].hlsUrl);
 };
 
 //禁用时间
@@ -476,7 +531,7 @@ const showDate = ref<any[]>([]);
 watch(
   time,
   (newValue, oldValue) => {
-    version.getPro() //检测是否有新版本
+    // version.getPro() //检测是否有新版本
     isExport.value = true;
     showDate.value = [];
     timeFunction(newValue)
@@ -816,7 +871,7 @@ function convertToHttps(url: string) {
   border-radius: 8px;
   background-color: #fff;
   padding: 0 10px 10px;
-  z-index: 99999;
+  z-index: 9999;
 
   &:hover {
     cursor: move;

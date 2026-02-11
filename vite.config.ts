@@ -44,7 +44,8 @@ export default defineConfig({
               // 接口地址
               // target: 'http://10.100.13.196:8888',
               // target: 'http://10.100.13.166:8888',
-              target: 'http://10.145.150.153:8888',
+              // target: 'http://10.145.150.153:8888',
+              target: 'https://spsn.jtyst.zj.gov.cn:8001/api2',
               rewrite: (path) => path.replace(/^\/api2/, ''),
           },
         },
